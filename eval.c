@@ -393,7 +393,8 @@ long int end_eval (void) {
 long int eval (void) {
 
   /* select the appropriate eval() routine: */
-
+  //depeding on the number of pieces remaining on the board
+  //choose the appropriate evaluation function
   if (piece_count > 11) {
     return (opn_eval ());
   }
@@ -405,8 +406,11 @@ long int eval (void) {
   }
 
 }
-
-
+//global variables dependencies
+//num_pieces in main.c
+//board in main.c current representation of the board
+//score in main.c contains score of a given board
+//moves in main.c some array
 long int mid_eval (void) {
 
   /* return a score for the current middlegame position: */
@@ -426,16 +430,23 @@ long int mid_eval (void) {
   }
   for (j = 1; j <= num_pieces; j++) {
     i = pieces[j];
+    //if pieces are dead don't do anything
     if (!i)
       continue;
+    //get both the file and rank of the piece
     pawn_file = file (i)+1;
     rank = rank (i);
+    //pawn is a constant in header file
+    //if the piece under consideration is a white pawn
     if (board[i] == wpawn) {
+      //this stores how many paws there are on a given file
       pawns[1][pawn_file]++;
+      //stores the minimum rank of a pawn on a given file
       if (rank < white_back_pawn[pawn_file]) {
 	white_back_pawn[pawn_file] = rank;
       }
     }
+    //same is done but for black pieces
     else if (board[i] == bpawn) {
       pawns[0][pawn_file]++;
       if (rank > black_back_pawn[pawn_file]) {
@@ -452,6 +463,7 @@ long int mid_eval (void) {
       continue;
     pawn_file = file (i)+1;
     rank = rank (i);
+    //give score for a given every different kind of piece
     switch (board[i]) {
       case (wpawn):
 	isolated = FALSE;
@@ -667,6 +679,7 @@ long int mid_eval (void) {
     }
   }
 
+  //npieces is a header file definition
   /* give penalties for blocking the e/d pawns: */
   if (!moved[41] && board[53] != npiece)
     score -= 5;

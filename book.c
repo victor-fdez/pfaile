@@ -58,7 +58,8 @@ void update_b_hash (void);
 void write_book (void);
 
 
-void b_hash_report (void) {
+void b_hash_report (void) 
+{
 
   /* print out a report on what we have stored in the book hash table: */
 
@@ -106,7 +107,8 @@ void b_hash_report (void) {
 }
 
 
-void b_shut_down (int status) {
+void b_shut_down (int status) 
+{
 
   /* shut down Faile from book creation: */
 

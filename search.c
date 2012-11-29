@@ -178,8 +178,8 @@ void perft (int depth) {
   }
 
 }
-
-
+/*OUT HEART*/
+//fix this
 long int qsearch (int alpha, int beta, int depth) {
 
   /* perform a quiscense search on the current node using alpha-beta with
