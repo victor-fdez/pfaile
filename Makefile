@@ -1,6 +1,6 @@
 CC = gcc
 OPT =
-PFLAGS = -Wall
+PFLAGS = -Wall -Werror
 FLAGS = -g -Wall
 PROF = -pg
 

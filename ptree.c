@@ -6,19 +6,31 @@
 
 #define MAX_TNODES 200
 #define MAX_PRI_SIZE 3
+#define max		0
+#define min		1
+
+#define NOT_PRUNNED 	0
+#define PRUNNED  	1
 
 typedef struct tnode_t
 {
-	int num_ch;
+	uint32_t depth;
+	//min or max
+	uint32_t type;
+	uint32_t alpha;
+	uint32_t beta;
+	uint32_t num_ch;
+	uint32_t num_ch_rem;
+	uint32_t status;
 	pthread_rwlock_t lock;
 	//priority of node
 	uint32_t pri_bits; 
 	uint64_t pri[MAX_PRI_SIZE];
 	//stored pointer to game state
-	void* v; 
+	void* state; 
 	//related nodes
 	struct tnode_t* parent;
-	struct tnode_t* ch[MAX_TNODES];	
+	struct tnode_t* ch;	
 }tnode;
 
 #define shift_d64(val, num_shift) (((num_shift) == 64) ? (0x0000000000000000) : (val >> num_shift))
@@ -138,7 +150,10 @@ inline int gt(uint64_t* pri_1, uint64_t* pri_2, int n_chunks)
 
 inline tnode* tnode_init()
 {
-	return (tnode*)malloc(sizeof(tnode));
+	tnode* tn = (tnode*)malloc(sizeof(tnode));
+	tn->status = NOT_PRUNNED;
+	pthread_rwlock_init(&(tn->lock), NULL);
+	return tn;
 } 
 
 inline void tnode_set_pri(tnode* parent, tnode* child, int n_child, int bits_childs)
@@ -151,6 +166,7 @@ inline void tnode_set_pri(tnode* parent, tnode* child, int n_child, int bits_chi
 } 
 inline void tnode_free(tnode* tn)
 {
+	pthread_rwlock_destroy(&(tn->lock));
 	free(tn);
 }
 
