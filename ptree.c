@@ -28,9 +28,13 @@ typedef struct tnode_t
 	uint64_t pri[MAX_PRI_SIZE];
 	//stored pointer to game state
 	void* state; 
+	//an array of moves
+	void* moves;
 	//related nodes
 	struct tnode_t* parent;
 	struct tnode_t* ch;	
+	int best_ch;
+	int ch_ref;
 }tnode;
 
 #define shift_d64(val, num_shift) (((num_shift) == 64) ? (0x0000000000000000) : (val >> num_shift))

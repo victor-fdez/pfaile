@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <limits.h>
+#include <strings.h>
+#include <string.h>
 #include "pprotos.h"
 #include "ptree.c"
 
@@ -14,12 +17,12 @@ typedef struct thread_info_t
 
 
 //global thread variables
-int num_threads = 4;
+int num_threads = 1;
+tnode* root = NULL;
 //search characterisitcs
 int max_depth = 5;
 //variable denoting if the problem has been solved
 bool solved = false;
-pthread_rwlock_t solved_lock;
 //nodes_added is used to broadcast to waiting workers
 //if new nodes have been added to the priority queue
 bool get_more_nodes = true;
@@ -27,10 +30,15 @@ pthread_cond_t nodes_added;
 pthread_mutex_t get_nodes;
 //generic functions for a specific search
 //get_moves_for_game_state is recommended to return the moves in order to be visited
-void (*get_successor_states_for_game_state)(void***, void*, int*);
+void*(*get_init_state)(void);
+void (*get_moves_for_game_state)(void**, long int*, void*, uint32_t*);
+void*(*get_state_for_move_and_game_state)(void*, void*, long int*, uint32_t*);
 //evaluate_game_state returns the integer value of this game state
 int   (*evaluate_game_state)(void*);
-
+//deallocation functions
+void (*free_state)(void*);
+void (*free_moves)(void*);
+int (*size_move)(void);
 //OPEN and CLOSE queues, used to prioritized 
 //the nodes to be searched
 #define OPEN_CAP_SIZE	10000000
@@ -40,73 +48,289 @@ pp_queue* close;
 //be prunned (incomplete)
 bool has_prunned_ancestor(tnode* node)
 {
-	while(node != NULL)
+	tnode* p;
+	while(node != root)
 	{
-		if(node->parent == NULL)
-			return false;	
-		
 		pthread_rwlock_rdlock(&(node->lock));
 		if(node->status == PRUNNED)
 		{
 			pthread_rwlock_unlock(&(node->lock));
 			return true;
 		}
-		node = node->parent;
+		p = node->parent;
 		pthread_rwlock_unlock(&(node->lock));
+		node = p;
 	}
 	return false;
 }
-
+//caller must make sure there are no race conditions
+void free_node(tnode* node)
+{
+	free_state(node->state);
+	free_moves(node->moves);		
+	pthread_rwlock_destroy(&(node->lock));
+	free(node->ch);
+}
+//expand_node adds all the children of the given node to the priority queue,
+//afterwards threads waiting for nodes for processing are notified of the
+//new nodes added to the priority queue
 void expand_node(tnode* node)
 {
 	int i;
 	tnode* tn_childs;
-	void* childs[MAX_TNODES];
+	void* moves;
+	long int move_ordering[MAX_TNODES];
 	int bits, type;
 	//get successor states of this node
-	get_successor_for_game_state(&(childs), node->state, &(node->num_ch));
+	get_moves_for_game_state((void**)&moves, (long int*)move_ordering, node->state, &(node->num_ch));
 	//allocate holder tnodes for successor states
-	tn_childs = (tnode*)malloc(sizeof(tnode)*(node->num_ch));
+	tn_childs = (tnode*)malloc(sizeof(tnode)*(node->num_ch)); //FREE remember
 	bits = ((int)(ceilf(logf((float)node->num_ch))));
 	type = ((node->type) + 1) % 2;
 	//assign pointer to array of tnodes
 	node->ch = tn_childs;
+	node->num_ch_rem = node->num_ch;
+	node->moves = moves;	
 	//initialize each successor tnode
 	for(i = 0; i < (node->num_ch); i++)
 	{
-		tnode* child = (tn_child+i);
+		tnode* child = (tn_childs+i);
 		pthread_rwlock_init(&(child->lock), NULL);
-		child->parent = node;	
-		child->ch = NULL;
+		child->depth = node->depth + 1;
+		child->type = type;
+		child->alpha = node->alpha;
+		child->beta = node->beta;	
 		child->num_ch = 0;
 		child->num_ch_rem = 0;
 		child->status = NOT_PRUNNED;
+		child->parent = node;	
+		child->ch = NULL;
+		child->best_ch = -1;
+		child->ch_ref = i;
+		//can be expensive
+		child->state = get_state_for_move_and_game_state(node->state, moves, move_ordering, &node->num_ch);
 		tnode_set_pri(node, child, i, bits);	//need to work for general case
 		//one can tell if a node is min or max by depth
-		child->depth = node->depth + 1;
-		child->type = type;
 	}
 	
 	pthread_mutex_lock(&get_nodes);
-		//add each child to the 
+		//add each child to the priority queue
 		for(i = 0; i < (node->num_ch); i++)
 		{
-			ppq_enqueue(open, childs+i);	
+			ppq_enqueue(open, tn_childs+i);	
 		}
+		//awake threads to work on new added childs if 
+		//these nodes are the only ones on the priority queue
 		pthread_cond_broadcast(&nodes_added);
 	pthread_mutex_unlock(&get_nodes);
 }
-//discard_node free the state of the give node
+//discard_node 
+//ASSUMPTIONS
+//only called on nodes that have no children, because they have not been expanded
 void discard_node(tnode* node)
 {
+	//set all ancestor up to first prunned ancestor to prunned
+	//including this ancestor
+	tnode *ancestor = node, *tmp;
+	pthread_rwlock_wrlock(&(ancestor->lock));
+	//should stop when the first prunned ancestor is found
+	while(ancestor->status != PRUNNED) 
+	{
+		//executed when ancestor is not prunned
+		ancestor->status = PRUNNED;
+		pthread_rwlock_unlock(&(ancestor->lock));
+		ancestor = ancestor->parent;
+		pthread_rwlock_wrlock(&(ancestor->lock));
+	}
+	//executed when ancestor is prunned
+	pthread_rwlock_unlock(&(ancestor->lock));
 
+	ancestor = node->parent;
+	//now free this node NO need for LOCKS
+	free_node(node);
 
+	//**then free ancestor nodes that have no children	
+	pthread_rwlock_wrlock(&(ancestor->lock));
+	//decrease num children remainig since we freed a children (node)
+	ancestor->num_ch_rem--;
+	//should stop when the first prunned ancestor is found
+	while(ancestor->num_ch_rem == 0 && ancestor->status == PRUNNED) 
+	{
+		//executed when ancestor is not prunned
+		pthread_rwlock_unlock(&(ancestor->lock));
+		tmp = ancestor->parent;
+		//now free this node NO need for LOCKS
+		free_node(ancestor);
+		//check next ancestor 
+		ancestor = tmp;
+		pthread_rwlock_wrlock(&(ancestor->lock));
+		//decrease num children remaining since we freed a children (ancestor)
+		ancestor->num_ch_rem--;
+	}
+	//executed when ancestor is prunned
+	pthread_rwlock_unlock(&(ancestor->lock));
+		
 }
 
+void propagate_down_to_leaf_values(tnode* node, int* alpha, int* beta, int* prunned)
+{
+	if(node == root)
+	{
+		pthread_rwlock_rdlock(&(node->lock));
+		*alpha = node->alpha;	
+		*beta = node->beta;
+		pthread_rwlock_unlock(&(node->lock));
+	}
+	else
+	{
+		pthread_rwlock_rdlock(&(node->lock));
+		if(node->status == PRUNNED) //stop updating if node is prunned
+		{
+			pthread_rwlock_unlock(&(node->lock));
+			*prunned = 1;
+			return;
+		}
+		pthread_rwlock_unlock(&(node->lock));
+		propagate_down_to_leaf_values(node->parent, alpha, beta, prunned);	
+		//if any ancestor was prunned then don't update any values
+		if(*prunned == 1)
+			return;
+		//update values with ancestor values
+		pthread_rwlock_wrlock(&(node->lock));
+			//if use the smallest possible window size
+			*alpha = (*alpha > node->alpha) ? *alpha : node->alpha;
+			*beta = (*beta < node->beta) ? *beta : node->beta;
+			node->alpha = *alpha;
+			node->beta = *beta;
+		pthread_rwlock_unlock(&(node->lock));
+	}
+}
+
+
+//update min and max values and 
 void process_leaf(tnode* leaf)
 {
+	tnode* ancestor, *p;
+	int val = evaluate_game_state(leaf->state);
+	int alpha = 0, beta = 0, prunned = 0;
+	//propagate up variables
+	int rem_ch = 1, free = 0, stop = 0;
+	int ch_ref = -1;
+	propagate_down_to_leaf_values(leaf->parent, &alpha, &beta, &prunned);
+	//clean up after leaf
+	if(prunned == 1)
+		discard_node(leaf);
+	//if any node up the tree is found to be prunned then prun this one
+	//and every node like discard node actually discard node may be used
+	ancestor = leaf->parent;
+	ch_ref = leaf->ch_ref;
+	//go up the tree updating each ancestor with this node's values if possible
+	free_node(leaf);
 
+	while(ancestor != root)
+	{
+		pthread_rwlock_wrlock(&(ancestor->lock));
+		//if the last ancestor was a leaf node or it had zero children
+		//then update the last ancestors parent
+		if(rem_ch == 1)
+		{
+			assert(ancestor->num_ch_rem > 0);
+			ancestor->num_ch_rem--;
+		}
+		else
+		{
+			assert(ancestor->num_ch_rem > 0); 	
+		}
+		assert(ancestor->num_ch_rem >= 0);
+		//if after update the node has zero children
+		if(ancestor->num_ch_rem == 0)
+		{
+			rem_ch = 1;
+			free = 1;
+		}
+		else
+		{
+			rem_ch = 0;
+			free = 0;
+		}
+		//should also SAVE THE BEST MOVE to be done later
+		//update alpha and beta
+		if(ancestor->type == max)
+		{
+			if(val > ancestor->alpha)
+			{
+				ancestor->alpha = val;
+				ancestor->best_ch = ch_ref;
+			}
+			if(ancestor->beta < ancestor->alpha)
+				ancestor->status = PRUNNED;
+			val = ancestor->alpha;
+		}
+		else //ancestor is min
+		{
+			if(val < ancestor->beta)
+			{
+				ancestor->beta = val;
+				ancestor->best_ch = ch_ref;
+			}
+			if(ancestor->beta < ancestor->alpha)
+				ancestor->status = PRUNNED;
+			val = ancestor->beta;
+		}
+		//the position of this ancestor with respect to it's father
+		ch_ref = ancestor->ch_ref;
+		//free ancestor node
+		if(free)
+		{
+			p = ancestor->parent;
+			pthread_rwlock_unlock(&(ancestor->lock));
+			free_node(ancestor);
+			ancestor = p;
+		}
+		else
+		{
+			p = ancestor->parent;
+			pthread_rwlock_unlock(&(ancestor->lock));
+			ancestor = p;
+		}	
+	}
 
+	//ancestor is ROOT different processing at root
+	assert(ancestor != NULL);
+	pthread_rwlock_wrlock(&(ancestor->lock));
+	//check if rem_ch
+	if(rem_ch == 1)
+	{
+		assert(ancestor->num_ch_rem > 0);
+		ancestor->num_ch_rem--;
+	}
+	else
+	{
+		assert(ancestor->num_ch_rem > 0); 	
+	}
+	//if the root does not have anymore childs remaining then stop all threads
+	//the problem has been searched
+	if(ancestor->num_ch_rem == 0)
+	{
+		stop = 1;	
+	}
+	
+	//update values at the root		
+	if(val > ancestor->alpha)
+	{
+		ancestor->alpha = val;	
+		ancestor->best_ch = ch_ref;
+	}
+	pthread_rwlock_unlock(&(ancestor->lock));
+	
+	//search tree has been fully explored
+	if(stop == 1)
+	{
+		pthread_mutex_lock(&(get_nodes));
+			solved = true;
+		pthread_cond_broadcast(&nodes_added);
+		pthread_mutex_unlock(&(get_nodes));
+	}
 }
 
 //ab_search is performed by all workers threads to work on nodes 
@@ -173,8 +397,8 @@ void init_workers(void)
 {
 	int i, tc_ret;
 	//create solved lock
-	if((tc_ret = pthread_rwlock_init(&solved_lock, NULL)))
-		error_shutdown("workers solved rwlock init", tc_ret);
+	//if((tc_ret = pthread_rwlock_init(&solved_lock, NULL)))
+	//	error_shutdown("workers solved rwlock init", tc_ret);
 	//create nodes_added condition variable
 	if((tc_ret = pthread_cond_init(&nodes_added, NULL)))
 		error_shutdown("workers nodes added cond init", tc_ret);
@@ -186,6 +410,22 @@ void init_workers(void)
 	workers = (thread_info*)malloc(sizeof(thread_info)*num_threads);
 	if(workers == NULL)
 		error_shutdown("workers malloc", -1);		
+	//add the ROOT tnode
+	root = tnode_init();
+	root->alpha = INT_MIN;
+	root->beta = INT_MAX;
+	root->num_ch_rem = 0;
+	root->num_ch = 0;
+	root->status = NOT_PRUNNED;
+	root->pri_bits = 0;
+	bzero((void*)(root->pri),sizeof(uint64_t)*MAX_PRI_SIZE);
+	root->state = get_init_state();
+	root->moves = NULL;
+	root->parent = NULL;
+	root->ch = NULL;
+	root->best_ch = -1;
+	root->ch_ref = -1;
+	ppq_enqueue(open, root);
 	//run num_threads 
 	for(i = 0; i < num_threads; i++)
 	{
@@ -211,6 +451,19 @@ void rest_workers()
 	free(workers);
 }
 
+void* finally()
+{
+	//get size of move in bytes
+	int size = size_move(); 		
+	assert(size > 0);
+	assert((root->best_ch) > 0);
+	void* best_move = (void*)malloc(size);
+	memcpy(best_move, ((root->moves)+(size*(root->best_ch))), size);
+	//free the root
+	free_node(root);		
+	return best_move;			
+}
+
 void* think(void)
 {
 	//parent thread sets up priority queue and root node
@@ -221,6 +474,6 @@ void* think(void)
 	//parent threads join and free all workers threads
 	rest_workers();	
 	//best move is returned to main
-	return NULL;
+	return finally();
 }
 
