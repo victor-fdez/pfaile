@@ -21,32 +21,37 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef __P_PROTOS_H__
-#define __P_PROTOS_H__
-#include <pthread.h>
-//parallel priority queue
-typedef int (*compare)(void*, void*);
-typedef struct
+#include <stdlib.h>
+#include <stdint.h>
+#include "pfaile_dep.h"
+
+void* get_init_stateI(void)
 {
-	void** heap;
-	int size;
-	int cap;
-	//operations should be short
-	pthread_spinlock_t s_lock;
-	compare compare_func;
-}pp_queue;
+	return NULL;
+}
 
-//ppqueue.c parallel queue implementation
-extern void ppq_test(void);
-extern pp_queue* ppq_create(int cap, compare);
-extern void ppq_enqueue(pp_queue* ppq, void* e);
-extern void* ppq_dequeue(pp_queue* ppq);
-extern void ppq_free(pp_queue* ppq);
+void get_moves_for_game_stateI(void** moves, long int* move_orderings, void* state, uint32_t* num_moves)
+{
 
-//putils.c other utility functions
-extern inline void error_shutdown(char* msg, int error_val);
+}
 
-//psearch.c alpha beta parallel search function
-extern void* think(void);
+void* get_state_for_move_and_game_stateI(void* state, void* moves, long int* move_orderings, uint32_t num_moves)
+{
+	return NULL;
+}
 
-#endif
+
+void free_stateI(void* state)
+{
+
+}
+
+void free_movesI(void* moves)
+{
+
+}
+
+void size_moveI()
+{
+	
+}

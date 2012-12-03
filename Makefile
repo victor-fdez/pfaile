@@ -1,3 +1,4 @@
+
 CC = gcc
 OPT =
 PFLAGS = -Wall -Werror
@@ -7,15 +8,17 @@ PROF = -pg
 # Release Build:
 
 objects = faile.o utils.o moves.o search.o eval.o hash.o rand.o book.o
-parallel_objects = pfaile.o psearch.o putils.o ppqueue.o
+parallel_objects = pfaile.o psearch.o putils.o ppqueue.o chess_plug.o pfaile_dep.c
 
 headers = extvars.h faile.h protos.h ptree.c
-parallel_headers = pprotos.h
+parallel_headers = pprotos.h pfaile_dep.h
 
 # Parallel Faile Build
 
 parallel_faile: $(parallel_objects)
 	$(CC) -o pfaile $(parallel_objects) -lm -lpthread
+
+pprotos.h: pfaile_dep.h
 
 %.o: %.c $(parallel_headers)
 	$(CC) $(PFLAGS) $(FLAGS) -c -o $@ $<
