@@ -8,7 +8,7 @@ PROF = -pg
 # Release Build:
 
 objects = faile.o utils.o moves.o search.o eval.o hash.o rand.o book.o
-parallel_objects = pfaile.o psearch.o putils.o ppqueue.o chess_plug.o pfaile_dep.c
+parallel_objects = pfaile.o psearch.o putils.o ppqueue.o chess_plug.o pfaile_dep.o pmoves.o peval.o
 
 headers = extvars.h faile.h protos.h ptree.c
 parallel_headers = pprotos.h pfaile_dep.h

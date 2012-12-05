@@ -26,10 +26,9 @@ SOFTWARE.
 #include "pprotos.h"
 #include "pfaile_dep.h"
 
-
-
 int main(int argc, char** argv)
 {
+		
 	test_faile();
 	//think();
 	//ppq_test();

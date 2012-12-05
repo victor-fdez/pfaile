@@ -21,17 +21,50 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include "pfaile_dep.h"
+//REMEBER to set start pieces count before running a search
+
 void test_faile()
 {
-
+	move m[200];
+	int i, num_moves = 0;
+	char* str = (char*)malloc(sizeof(char)*8);
+	state* s = init_game();
+	if(s == NULL)
+	{
+		exit(-1);
+		printf("error\n");
+	}
+	gen(&m[0], &num_moves, s);
+	printf("FIRST BOARD\n");
+	display_board (stdout, 1, s);
+	start_piece_count = s->num_pieces;
+	for(i = 0; i < num_moves; i++)
+	{
+		make(&m[0], i, s);
+		printf("score  = %ld\n", eval(s));
+		display_board (stdout, 1, s);
+		unmake(&m[0], i, s);
+	}
+	//comp_to_coord(m, str);
+	printf("%s\n", str);
 }
 
-void init_game (state* s) 
+state* init_game () 
 {
 
-	/* set up a new game: */
+	// set up a new game: 
 	int i;
-		
+	state* s = (state*)malloc(sizeof(state));
+	move* m = (move*)malloc(sizeof(move));
+	uint8_t* board = (uint8_t*)(s->board);
+	uint8_t* squares = (uint8_t*)(s->squares);
+	uint8_t* moved = (uint8_t*)(s->moved);
+	uint8_t* pieces = (uint8_t*)(s->pieces);
+	uint8_t* num_pieces = &(s->num_pieces);
 	uint8_t init_board[144] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,
@@ -46,41 +79,38 @@ void init_game (state* s)
 	0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0
 	};
-
+	s->m = m;
 	memcpy (s->board, init_board, sizeof(init_board));
 
 	for (i = 0; i <= 143; i++)
-		(s->moved)[i] = 0;
-	/*
-	white_to_move = 1;
-	ep_square = 0;
-	wking_loc = 30;
-	bking_loc = 114;
-	white_castled = no_castle;
-	black_castled = no_castle;
-	fifty = 0;
-	game_ply = 0;
-	*/
+		moved[i] = 0;
 
-	/*
-	result = no_result;
-	captures = FALSE;
+	s->white_to_move = 1;
+	s->ep_square = 0;
+	s->wking_loc = 30;
+	s->bking_loc = 114;
+	s->white_castled = no_castle;
+	s->black_castled = no_castle;
+	//fifty = 0;
+	//game_ply = 0;
 
-	piece_count = 14;
+	//result = no_result;
+	s->captures = false;
 
-	post = TRUE;
+	s->piece_count = 14;
 
-	moves_to_tc = 30;
-	min_per_game = 10;
-	time_cushion = 0;
+	//post = TRUE;
 
-	reset_piece_square ();
-	*/
+	//moves_to_tc = 30;
+	//min_per_game = 10;
+	//time_cushion = 0;
+
+	//reset_piece_square ();
 
 	/* we use piece number 0 to show a piece taken off the board, so don't
      use that piece number for other things: */
 	pieces[0] = 0;
-	num_pieces = 0;
+	*num_pieces = 0;
 	//pieces  - tells where each piece is positioned
 	//squares - tells for each piece found how many pieces there are on 
 	//before it.
@@ -88,8 +118,8 @@ void init_game (state* s)
 	{
 		if (board[i] != frame && board[i] != npiece) 
 		{
-			pieces[++num_pieces] = i;
-			squares[i] = num_pieces;
+			pieces[++(*num_pieces)] = i;
+			squares[i] = *num_pieces;
 		}
 		else 
 		{
@@ -97,7 +127,7 @@ void init_game (state* s)
 			
 		}
 	}
-
+	//STILL will not be used
 	/*
 	// compute the initial hash:
 	srand (173);
@@ -106,95 +136,105 @@ void init_game (state* s)
 	// set the first 3 rep entry:
 	rep_history[0] = cur_pos;
 	*/
-
+	return s;
 }
 
 void comp_to_coord (move* move, char* str) {
 
-  /* convert a move_s internal format move to coordinate notation: */
+	// convert a move_s internal format move to coordinate notation: 
 
-  int prom, from, target, f_rank, t_rank, converter;
-  char f_file, t_file;
+	uint8_t prom, from, target, f_rank, t_rank, converter;
+	uint8_t f_file, t_file;
 
-  prom = move.promoted;
-  from = move.from;
-  target = move.target;
+	prom = move->promoted;
+	from = move->from;
+	target = move->target;
 
-  /* check to see if we have valid coordinates before continuing: */
-  if (rank (from) < 1 || rank (from) > 8 ||
-      file (from) < 1 || file (from) > 8 ||
-      rank (target) < 1 || rank (target) > 8 ||
-      file (target) < 1 || file (target) > 8) {
-    sprintf (str, "xxxx");
-    return;
-  }
-  
-  f_rank = rank (from);
-  t_rank = rank (target);
-  converter = (int) 'a';
-  f_file = file (from)+converter-1;
-  t_file = file (target)+converter-1;
+	// check to see if we have valid coordinates before continuing: 
+	if (rank (from) < 1 || rank (from) > 8 ||
+		file (from) < 1 || file (from) > 8 ||
+		rank (target) < 1 || rank (target) > 8 ||
+		file (target) < 1 || file (target) > 8) {
+		sprintf (str, "xxxx");
+		return;
+	}
 
-  /* "normal" move: */
-  if (!prom) {
-    sprintf (str, "%c%d%c%d", f_file, f_rank, t_file, t_rank);
-  }
+	f_rank = rank (from);
+	t_rank = rank (target);
+	converter = (uint8_t) 'a';
+	f_file = file (from)+converter-1;
+	t_file = file (target)+converter-1;
 
-  /* promotion move: */
-  else {
-    if (prom == wknight || prom == bknight) {
-      sprintf (str, "%c%d%c%dn", f_file, f_rank, t_file, t_rank);
-    }
-    else if (prom == wrook || prom == brook) {
-      sprintf (str, "%c%d%c%dr", f_file, f_rank, t_file, t_rank);
-    }
-    else if (prom == wbishop || prom == bbishop) {
-      sprintf (str, "%c%d%c%db", f_file, f_rank, t_file, t_rank);
-    }
-    else {
-      sprintf (str, "%c%d%c%dq", f_file, f_rank, t_file, t_rank);
-    }
-  }
+	// "normal" move: 
+	if (!prom) 
+	{
+		sprintf (str, "%c%d%c%d", f_file, f_rank, t_file, t_rank);
+	}
+	// promotion move: 
+	else 
+	{
+		if (prom == wknight || prom == bknight) 
+		{
+			sprintf (str, "%c%d%c%dn", f_file, f_rank, t_file, t_rank);
+		}
+		else if (prom == wrook || prom == brook) 
+		{
+			sprintf (str, "%c%d%c%dr", f_file, f_rank, t_file, t_rank);
+		}
+		else if (prom == wbishop || prom == bbishop) 
+		{
+			sprintf (str, "%c%d%c%db", f_file, f_rank, t_file, t_rank);
+		}
+		else 
+		{
+			sprintf (str, "%c%d%c%dq", f_file, f_rank, t_file, t_rank);
+		}
+	}
 
 }
 
+//char divider[50] = "-------------------------------------------------";
 
-void display_board (FILE *stream, int color) {
+void display_board (FILE *stream, int color, state* s) 
+{
 
-  /* prints a text-based representation of the board: */
-  
-  char *line_sep = "+----+----+----+----+----+----+----+----+";
-  char *piece_rep[14] = {"!!", " P", "*P", " N", "*N", " K", "*K", " R",
+	  
+	char *line_sep = "+----+----+----+----+----+----+----+----+";
+	char *piece_rep[14] = {"!!", " P", "*P", " N", "*N", " K", "*K", " R",
 			  "*R", " Q", "*Q", " B", "*B", "  "};
-  int a,b,c;
-
-  if (color % 2) {
-    fprintf (stream, "  %s\n", line_sep);
-    for (a = 1; a <= 8; a++) {
-      fprintf (stream, "%d |", 9 - a);
-      for (b = 0; b <= 11; b++) {
-	c = 120 - a*12 + b;
-	if (board[c] != 0)
-	  fprintf (stream, " %s |", piece_rep[board[c]]);
-      }
-      fprintf (stream, "\n  %s\n", line_sep);
-    }
-    fprintf (stream, "\n     a    b    c    d    e    f    g    h\n\n");
-  }
-
-  else {
-    fprintf (stream, "  %s\n", line_sep);
-    for (a = 1; a <= 8; a++) {
-      fprintf (stream, "%d |", a);
-      for (b = 0; b <= 11; b++) {
-	c = 24 + a*12 -b;
-	if (board[c] != 0)
-	  fprintf (stream, " %s |", piece_rep[board[c]]);
-      }
-      fprintf (stream, "\n  %s\n", line_sep);
-    }
-    fprintf (stream, "\n     h    g    f    e    d    c    b    a\n\n");
-  }
+		
+	int a,b,c;
+	uint8_t* board = s->board;	
+	if (color % 2) //when color 1 or white 
+		{
+		fprintf (stream, "  %s\n", line_sep);
+		for (a = 1; a <= 8; a++) 
+		{
+			fprintf (stream, "%d |", 9 - a);
+			for (b = 0; b <= 11; b++) 
+			{
+				c = 120 - a*12 + b;
+				if (board[c] != 0)
+				 	fprintf (stream, " %s |", piece_rep[board[c]]);
+			}
+			fprintf (stream, "\n  %s\n", line_sep);
+		}
+		fprintf (stream, "\n     a    b    c    d    e    f    g    h\n\n");
+	}
+	else //when color 0 is black
+	{
+		fprintf (stream, "  %s\n", line_sep);
+		for (a = 1; a <= 8; a++) {
+			fprintf (stream, "%d |", a);
+			for (b = 0; b <= 11; b++) {
+				c = 24 + a*12 -b;
+				if (board[c] != 0)
+					fprintf (stream, " %s |", piece_rep[board[c]]);
+			}
+			fprintf (stream, "\n  %s\n", line_sep);
+		}
+		fprintf (stream, "\n     h    g    f    e    d    c    b    a\n\n");
+	}
 
 }
 

@@ -32,12 +32,11 @@ SOFTWARE.
  * Purpose: functions for evaluating positions    *
  **************************************************/
 
-#include "faile.h"
-#include "extvars.h"
-#include "protos.h"
-
-
+#include <stdio.h>
+#include <string.h>
+#include "pfaile_dep.h"
 /* these tables will be used for positional bonuses: */
+uint8_t start_piece_count = 0;
 
 int bishop[144] = {
 0,0,0,0,0,0,0,0,0,0,0,0,
@@ -145,7 +144,13 @@ int rev_rank[9] = {
 0,8,7,6,5,4,3,2,1};
 
 
-long int end_eval (void) {
+long int end_eval (state* s) {
+
+	uint8_t* board = s->board;
+	uint8_t* pieces = s->pieces;
+	uint8_t white_to_move = (s->white_to_move);	
+	uint8_t piece_count= (s->piece_count);
+	uint8_t num_pieces= (s->num_pieces);
 
   /* return a score for the current endgame position: */
 
@@ -192,8 +197,8 @@ long int end_eval (void) {
     rank = rank (i);
     switch (board[i]) {
       case (wpawn):
-	isolated = FALSE;
-	backwards = FALSE;
+	isolated = false;
+	backwards = false;
 	score += 100;
 	score += white_pawn[i];
 
@@ -205,11 +210,11 @@ long int end_eval (void) {
 	if (white_back_pawn[pawn_file+1] > rank
 	    && white_back_pawn[pawn_file-1] > rank) {
 	  score -= 8;
-	  backwards = TRUE;
+	  backwards = true;
 	  /* check to see if it is furthermore isolated: */
 	  if (!pawns[1][pawn_file+1] && !pawns[1][pawn_file-1]) {
 	    score -= 5;
-	    isolated = TRUE;
+	    isolated = true;
 	  }
 	}
 
@@ -238,8 +243,8 @@ long int end_eval (void) {
 	break;
 
       case (bpawn):
-	isolated = FALSE;
-	backwards = FALSE;
+	isolated = false;
+	backwards = false;
 	score -= 100;
 	score -= black_pawn[i];
 
@@ -251,11 +256,11 @@ long int end_eval (void) {
 	if (black_back_pawn[pawn_file+1] < rank
 	    && black_back_pawn[pawn_file-1] < rank) {
 	  score += 8;
-	  backwards = TRUE;
+	  backwards = true;
 	  /* check to see if it is furthermore isolated: */
 	  if (!pawns[0][pawn_file+1] && !pawns[0][pawn_file-1]) {
 	    score += 5;
-	    isolated = TRUE;
+	    isolated = true;
 	  }
 	}
 
@@ -390,15 +395,24 @@ long int end_eval (void) {
 }
 
 
-
 //global variables dependencies
 //num_pieces in main.c
 //board in main.c current representation of the board
 //score in main.c contains score of a given board
 //moves in main.c some array
-long int mid_eval (void) {
+long int mid_eval (state* s) {
 
-  /* return a score for the current middlegame position: */
+	uint8_t* board = s->board;
+	uint8_t* pieces = s->pieces;
+	uint8_t* moved = s->moved;
+	uint8_t white_to_move = (s->white_to_move);	
+	uint8_t wking_loc= (s->wking_loc);
+	uint8_t bking_loc= (s->bking_loc);
+	uint8_t white_castled= (s->white_castled);
+	uint8_t black_castled= (s->black_castled);
+	uint8_t piece_count= (s->piece_count);
+	uint8_t num_pieces= (s->num_pieces);
+	  /* return a score for the current middlegame position: */
 
   int i, pawn_file, pawns[2][11], white_back_pawn[11], black_back_pawn[11],
     rank, wking_pawn_file, bking_pawn_file, j;
@@ -451,8 +465,8 @@ long int mid_eval (void) {
     //give score for a given every different kind of piece
     switch (board[i]) {
       case (wpawn):
-	isolated = FALSE;
-	backwards = FALSE;
+	isolated = false;
+	backwards = false;
 	score += 100;
 	score += white_pawn[i];
 
@@ -460,11 +474,11 @@ long int mid_eval (void) {
 	if (white_back_pawn[pawn_file+1] > rank
 	    && white_back_pawn[pawn_file-1] > rank) {
 	  score -= 5;
-	  backwards = TRUE;
+	  backwards = true;
 	  /* check to see if it is furthermore isolated: */
 	  if (!pawns[1][pawn_file+1] && !pawns[1][pawn_file-1]) {
 	    score -= 3;
-	    isolated = TRUE;
+	    isolated = true;
 	  }
 	}
 
@@ -490,8 +504,8 @@ long int mid_eval (void) {
 	break;
 
       case (bpawn):
-	isolated = FALSE;
-	backwards = FALSE;
+	isolated = false;
+	backwards = false;
 	score -= 100;
 	score -= black_pawn[i];
 
@@ -499,11 +513,11 @@ long int mid_eval (void) {
 	if (black_back_pawn[pawn_file+1] < rank
 	    && black_back_pawn[pawn_file-1] < rank) {
 	  score += 5;
-	  backwards = TRUE;
+	  backwards = true;
 	  /* check to see if it is furthermore isolated: */
 	  if (!pawns[0][pawn_file+1] && !pawns[0][pawn_file-1]) {
 	    score += 3;
-	    isolated = TRUE;
+	    isolated = true;
 	  }
 	}
 
@@ -732,7 +746,16 @@ long int mid_eval (void) {
 
 }
 
-long int opn_eval (void) {
+long int opn_eval (state* s) {
+	uint8_t* board = s->board;
+	uint8_t* pieces = s->pieces;
+	uint8_t* moved = s->moved;
+	uint8_t white_to_move = (s->white_to_move);	
+	uint8_t wking_loc= (s->wking_loc);
+	uint8_t bking_loc= (s->bking_loc);
+	uint8_t num_pieces= (s->num_pieces);
+	uint8_t white_castled= (s->white_castled);
+	uint8_t black_castled= (s->black_castled);
 
   /* return a score for the current opening position: */
 
@@ -779,8 +802,8 @@ long int opn_eval (void) {
     rank = rank (i);
     switch (board[i]) {
       case (wpawn):
-	isolated = FALSE;
-	backwards = FALSE;
+	isolated = false;
+	backwards = false;
 	score += 100;
 	score += white_pawn[i];
 
@@ -794,11 +817,11 @@ long int opn_eval (void) {
 	     moved yet! */
 	  if (rank != 2)
 	    score -= 3;
-	  backwards = TRUE;
+	  backwards = true;
 	  /* check to see if it is furthermore isolated: */
 	  if (!pawns[1][pawn_file+1] && !pawns[1][pawn_file-1]) {
 	    score -= 2;
-	    isolated = TRUE;
+	    isolated = true;
 	  }
 	}
 
@@ -824,8 +847,8 @@ long int opn_eval (void) {
 	break;
 
       case (bpawn):
-	isolated = FALSE;
-	backwards = FALSE;
+	isolated = false;
+	backwards = false;
 	score -= 100;
 	score -= black_pawn[i];
 
@@ -839,11 +862,11 @@ long int opn_eval (void) {
 	     moved yet! */
 	  if (rank != 2)
 	    score += 3;
-	  backwards = TRUE;
+	  backwards = true;
 	  /* check to see if it is furthermore isolated: */
 	  if (!pawns[0][pawn_file+1] && !pawns[0][pawn_file-1]) {
 	    score += 2;
-	    isolated = TRUE;
+	    isolated = true;
 	  }
 	}
 
@@ -1086,8 +1109,6 @@ long int opn_eval (void) {
 
 }
 
-
-
 long int eval (state* s) {
 
 	uint8_t piece_count = s->piece_count;
@@ -1095,13 +1116,14 @@ long int eval (state* s) {
   //depeding on the number of pieces remaining on the board
   //choose the appropriate evaluation function
   if (piece_count > 11) {
-    return (opn_eval ());
+    return (opn_eval (s));
   }
   else if (piece_count < 5) {
-    return (end_eval ());
+    return (end_eval (s));
   }
   else {
-    return (mid_eval ());
+    return (mid_eval (s));
   }
 
 }
+
