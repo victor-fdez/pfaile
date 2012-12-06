@@ -48,7 +48,7 @@ extern void ppq_free(pp_queue* ppq);
 extern inline void error_shutdown(char* msg, int error_val);
 
 //psearch.c alpha beta parallel search function
-extern void* think(void);
+extern void* think(void*);
 extern void*(*get_init_state)(void);
 extern void (*get_moves_for_game_state)(void**, long int*, void*, uint32_t*);
 extern void*(*get_state_for_move_and_game_state)(void*, void*, long int*, int*, uint32_t);

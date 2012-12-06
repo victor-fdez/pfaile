@@ -28,7 +28,7 @@ SOFTWARE.
 
 int main(int argc, char** argv)
 {
-					
+	int i = 0;				
 	get_init_state = get_init_stateI;
 	get_moves_for_game_state = get_moves_for_game_stateI;
 	get_state_for_move_and_game_state = get_state_for_move_and_game_stateI;
@@ -38,12 +38,15 @@ int main(int argc, char** argv)
 	size_move = size_moveI;
 	//test_faile();
 	state* s = init_game();
-	move* m = (move*)think();
 	display_board(stdout, 0, s);	
-	make(m, 0, s);
-	display_board(stdout, 0, s);	
+	for(i = 0; i < 20; i++)	
+	{
+		move* m = (move*)think((void*)s);
+		make(m, 0, s);
+		display_board(stdout, 0, s);	
+		free(m);
+	}
 	free(s);
-	free(m);
 	//ppq_test();
 	return 0;
 }
