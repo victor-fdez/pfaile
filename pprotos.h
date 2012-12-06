@@ -24,6 +24,7 @@ SOFTWARE.
 #ifndef __P_PROTOS_H__
 #define __P_PROTOS_H__
 #include <pthread.h>
+#include <stdint.h>
 //parallel priority queue
 typedef int (*compare)(void*, void*);
 typedef struct
@@ -48,5 +49,13 @@ extern inline void error_shutdown(char* msg, int error_val);
 
 //psearch.c alpha beta parallel search function
 extern void* think(void);
-
+extern void*(*get_init_state)(void);
+extern void (*get_moves_for_game_state)(void**, long int*, void*, uint32_t*);
+extern void*(*get_state_for_move_and_game_state)(void*, void*, long int*, uint32_t);
+//evaluate_game_state returns the integer value of this game state
+extern long int  (*evaluate_game_state)(void*);
+//deallocation functions
+extern void (*free_state)(void*);
+extern void (*free_moves)(void*);
+extern int (*size_move)(void);
 #endif

@@ -113,6 +113,8 @@ extern void test_faile();
 extern state* init_game ();
 extern void comp_to_coord (move* move, char* str);
 extern void display_board (FILE *stream, int color, state* s);
+extern void order_moves (move* moves, long int move_ordering[], int num_moves);
+extern bool remove_one (int *marker, long int* move_ordering, int num_moves);
 //evaluation functions to score a board
 extern long int eval (state* s);
 //faile moves.c modified to be thread safe
@@ -127,8 +129,9 @@ void unmake(move* moves, int i, state* s);
 extern void* get_init_stateI(void);
 extern void get_moves_for_game_stateI(void** moves, long int* move_orderings, void* state, uint32_t* num_moves);
 extern void* get_state_for_move_and_game_stateI(void* state, void* moves, long int* move_orderings, uint32_t num_moves);
+extern long int evaluate_game_stateI(void*);
 extern void free_stateI(void* state);
 extern void free_movesI(void* moves);
-extern void size_moveI();
+extern int size_moveI();
 
 #endif

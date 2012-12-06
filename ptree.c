@@ -40,8 +40,8 @@ typedef struct tnode_t
 	uint32_t depth;
 	//min or max
 	uint32_t type;
-	uint32_t alpha;
-	uint32_t beta;
+	long int alpha;
+	long int beta;
 	uint32_t num_ch;
 	uint32_t num_ch_rem;
 	uint32_t status;

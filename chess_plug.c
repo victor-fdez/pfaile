@@ -23,35 +23,59 @@ SOFTWARE.
 */
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+#include <assert.h>
 #include "pfaile_dep.h"
+#define MAX_TNODES 200
 
 void* get_init_stateI(void)
 {
-	return NULL;
+	return ((void*)init_game());
 }
 
 void get_moves_for_game_stateI(void** moves, long int* move_orderings, void* state, uint32_t* num_moves)
 {
-
+	move* moves_i = (move*)malloc(sizeof(move)*MAX_TNODES);
+	int num_moves_int = 0;
+	//generate alll possible moves
+	gen(moves_i, &num_moves_int, state);	
+	//order randomly the possible moves
+	order_moves(moves_i, move_orderings, num_moves_int);
+	//set the pointer to point to these moves
+	*num_moves = (uint32_t)num_moves_int;
+	*moves = moves_i;
 }
 
-void* get_state_for_move_and_game_stateI(void* state, void* moves, long int* move_orderings, uint32_t num_moves)
+void* get_state_for_move_and_game_stateI(void* s_from, void* moves, long int* move_orderings, uint32_t num_moves)
 {
-	return NULL;
+	int i;
+	state* s_to = (state*)malloc(sizeof(state));	
+	move* m = (move*)moves;
+	//copy the old state to the new state
+	memcpy(s_to, s_from, sizeof(state));	
+	//remove get the number of the best ordering
+	assert(remove_one(&i, move_orderings, num_moves));
+	//make the move 
+	make(m, i, s_to);
+	return s_to;
 }
 
+long int evaluate_game_stateI(void* s)
+{
+	return eval((state*) s);
+}
 
 void free_stateI(void* state)
 {
-
+	free(state);
 }
-
+//TODO: change the way memory is set for moves
 void free_movesI(void* moves)
 {
-
+	free(moves);
 }
 
-void size_moveI()
+int size_moveI()
 {
-	
+	return (int)sizeof(move);
 }

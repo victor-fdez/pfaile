@@ -24,6 +24,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 #include "pfaile_dep.h"
 //REMEBER to set start pieces count before running a search
 
@@ -235,6 +236,153 @@ void display_board (FILE *stream, int color, state* s)
 		}
 		fprintf (stream, "\n     h    g    f    e    d    c    b    a\n\n");
 	}
+
+}
+void order_moves (move* moves, long int* move_ordering, int num_moves) {
+	int i;
+	for(i = 0; i < num_moves; i++)
+	{
+		move_ordering[i] = (long int)rand();
+	}	
+}
+
+/* DO RANDOM ORDERING INSTEAD
+void order_moves (move* moves, long int move_ordering[], int num_moves, move *h_move, state* s) {
+
+	uint8_t* board = s->board;
+	uint8_t* pieces = s->pieces;
+	uint8_t* moved = s->moved;
+	uint8_t white_to_move = (s->white_to_move);	
+	uint8_t wking_loc= (s->wking_loc);
+	uint8_t bking_loc= (s->bking_loc);
+	uint8_t white_castled= (s->white_castled);
+	uint8_t black_castled= (s->black_castled);
+	uint8_t piece_count= (s->piece_count);
+	uint8_t num_pieces= (s->num_pieces);
+  // sort out move ordering scores in move_ordering, using implemented
+//     heuristics: 
+
+  int cap_values[14] = {
+    0,100,100,310,310,0,0,500,500,955,955,325,325,0};
+  int i, from, target, promoted, captured;
+
+  // fill the move ordering array: 
+
+  // if searching the pv, give it the highest move ordering, and if not, rely
+//     on the other heuristics: 
+  if (searching_pv) {
+    searching_pv = FALSE;
+    for (i = 0; i < num_moves; i++) {
+      from = moves[i].from;
+      target = moves[i].target;
+      promoted = moves[i].promoted;
+      captured = moves[i].captured;
+      
+      // give captures precedence in move ordering, and order captures by
+//	 material gain 
+      if (captured != npiece)
+	move_ordering[i] = cap_values[captured]-cap_values[board[from]]+1000;
+      else
+	move_ordering[i] = 0;
+
+      // make sure the suggested hash move gets ordered high: 
+      if (from == h_move->from && target == h_move->target
+	  && promoted == h_move->promoted) {
+	move_ordering[i] += INF-10000;
+      }
+
+      // make the pv have highest move ordering: 
+      if (from == pv[1][ply].from && target == pv[1][ply].target
+	  && promoted == pv[1][ply].promoted) {
+	searching_pv = TRUE;
+	move_ordering[i] += INF;
+      }
+
+      // heuristics other than pv (no need to use them on the pv move - it is
+//	 already ordered highest) 
+      else {
+	// add the history heuristic bonus: 
+	move_ordering[i] += (history_h[from][target]>>i_depth);
+
+	// add the killer move heuristic bonuses: 
+	if (from == killer1[ply].from && target == killer1[ply].target
+	    && promoted == killer1[ply].promoted)
+	  move_ordering[i] += 1000;
+	else if (from == killer2[ply].from && target == killer2[ply].target
+	    && promoted == killer2[ply].promoted)
+	  move_ordering[i] += 500;
+	else if (from == killer3[ply].from && target == killer3[ply].target
+	    && promoted == killer3[ply].promoted)
+	  move_ordering[i] += 250;
+      }
+    }
+  }
+
+  // if not searching the pv: 
+  else {
+    for (i = 0; i < num_moves; i++) {
+      from = moves[i].from;
+      target = moves[i].target;
+      promoted = moves[i].promoted;
+      captured = moves[i].captured;
+      
+      // give captures precedence in move ordering, and order captures by
+//	 material gain 
+      if (captured != npiece)
+	move_ordering[i] = cap_values[captured]-cap_values[board[from]]+1000;
+      else
+	move_ordering[i] = 0;
+
+      // make sure the suggested hash move gets ordered first: 
+      if (from == h_move->from && target == h_move->target
+	  && promoted == h_move->promoted) {
+	move_ordering[i] += INF+1000;
+      }
+
+      // heuristics other than pv 
+      
+      // add the history heuristic bonus: 
+      move_ordering[i] += (history_h[from][target]>>i_depth);
+
+      // add the killer move heuristic bonuses: 
+      if (from == killer1[ply].from && target == killer1[ply].target
+	  && promoted == killer1[ply].promoted)
+	move_ordering[i] += 1000;
+      else if (from == killer2[ply].from && target == killer2[ply].target
+	  && promoted == killer2[ply].promoted)
+	move_ordering[i] += 500;
+      else if (from == killer3[ply].from && target == killer3[ply].target
+	  && promoted == killer3[ply].promoted)
+	move_ordering[i] += 250;
+    }
+  }
+
+}
+*/
+bool remove_one (int *marker, long int* move_ordering, int num_moves) {
+
+//     a function to give pick the top move order, one at a time on each call.
+//     Will return TRUE while there are still moves left, FALSE after all moves
+//     have been used
+
+  int i, best = -1;
+
+  *marker = -1;
+
+  for (i = 0; i < num_moves; i++) {
+    if (move_ordering[i] > best) {
+      *marker = i;
+      best = move_ordering[i];
+    }
+  }
+
+  if (*marker > -1) {
+    move_ordering[*marker] = -1;
+    return true;
+  }
+  else {
+    return false;
+  }
 
 }
 
