@@ -60,7 +60,6 @@ state* init_game ()
 	// set up a new game: 
 	int i;
 	state* s = (state*)malloc(sizeof(state));
-	move* m = (move*)malloc(sizeof(move));
 	uint8_t* board = (uint8_t*)(s->board);
 	uint8_t* squares = (uint8_t*)(s->squares);
 	uint8_t* moved = (uint8_t*)(s->moved);
@@ -80,7 +79,6 @@ state* init_game ()
 	0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0
 	};
-	s->m = m;
 	memcpy (s->board, init_board, sizeof(init_board));
 
 	for (i = 0; i <= 143; i++)

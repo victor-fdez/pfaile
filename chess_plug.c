@@ -46,7 +46,7 @@ void get_moves_for_game_stateI(void** moves, long int* move_orderings, void* sta
 	*moves = moves_i;
 }
 
-void* get_state_for_move_and_game_stateI(void* s_from, void* moves, long int* move_orderings, uint32_t num_moves)
+void* get_state_for_move_and_game_stateI(void* s_from, void* moves, long int* move_orderings, int *ch, uint32_t num_moves)
 {
 	int i;
 	state* s_to = (state*)malloc(sizeof(state));	
@@ -55,6 +55,8 @@ void* get_state_for_move_and_game_stateI(void* s_from, void* moves, long int* mo
 	memcpy(s_to, s_from, sizeof(state));	
 	//remove get the number of the best ordering
 	assert(remove_one(&i, move_orderings, num_moves));
+	*ch = i;
+	assert(i < num_moves);
 	//make the move 
 	make(m, i, s_to);
 	return s_to;

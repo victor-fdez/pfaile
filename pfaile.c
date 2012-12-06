@@ -39,7 +39,11 @@ int main(int argc, char** argv)
 	//test_faile();
 	state* s = init_game();
 	move* m = (move*)think();
+	display_board(stdout, 0, s);	
 	make(m, 0, s);
+	display_board(stdout, 0, s);	
+	free(s);
+	free(m);
 	//ppq_test();
 	return 0;
 }

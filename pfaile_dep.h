@@ -88,7 +88,6 @@ typedef struct
 //state information will be approximately 512bytes size
 typedef struct
 {
-	move* m;
 	uint8_t board[144];
 	uint8_t moved[144];
 	uint8_t pieces[33];
@@ -128,7 +127,7 @@ void unmake(move* moves, int i, state* s);
 //alpha beta search interface
 extern void* get_init_stateI(void);
 extern void get_moves_for_game_stateI(void** moves, long int* move_orderings, void* state, uint32_t* num_moves);
-extern void* get_state_for_move_and_game_stateI(void* state, void* moves, long int* move_orderings, uint32_t num_moves);
+extern void* get_state_for_move_and_game_stateI(void* state, void* moves, long int* move_orderings, int* ch, uint32_t num_moves);
 extern long int evaluate_game_stateI(void*);
 extern void free_stateI(void* state);
 extern void free_movesI(void* moves);
