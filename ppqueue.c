@@ -100,7 +100,7 @@ void ppq_test(void)
 pp_queue* ppq_create(int cap, compare compare_func)
 {
 	pp_queue* ppq;
-	int 	  ret;
+	//int 	  ret;
 	if((ppq = (pp_queue*)malloc(sizeof(pp_queue))) == NULL)
 		error_shutdown("pp_queue malloc", -1);	
 	if((ppq->heap = (void**)malloc(sizeof(void*) * cap)) == NULL)
@@ -108,18 +108,18 @@ pp_queue* ppq_create(int cap, compare compare_func)
 	ppq->size = 0;
 	ppq->cap = cap;
 	ppq->compare_func = compare_func;
-	if((ret = pthread_spin_init(&(ppq->s_lock), PTHREAD_PROCESS_PRIVATE)))
-		error_shutdown("pp_queue spin lock init", ret);
+	//if((ret = pthread_spin_init(&(ppq->s_lock), PTHREAD_PROCESS_PRIVATE)))
+	//	error_shutdown("pp_queue spin lock init", ret);
 	return ppq;
 }
 
 //enqueues an element to the parallel priority queue
 void ppq_enqueue(pp_queue* ppq, void* e)
 {
-	int i, ret; 
+	int i;// ret; 
 	void** p;
-	if((ret = pthread_spin_lock(&(ppq->s_lock))))	
-		error_shutdown("pp_queue enqueue spin lock lock", ret);
+	//if((ret = pthread_spin_lock(&(ppq->s_lock))))	
+	//	error_shutdown("pp_queue enqueue spin lock lock", ret);
 	//enqueue element in min queue
 	ppq->size++;
 	//initial position of node in head
@@ -139,20 +139,20 @@ void ppq_enqueue(pp_queue* ppq, void* e)
 	}	
 	
 	heap_ele(ppq, i) = e;
-	if((ret = pthread_spin_unlock(&(ppq->s_lock))))
-		error_shutdown("pp_queue enqueue spin lock unlock", ret);
+	//if((ret = pthread_spin_unlock(&(ppq->s_lock))))
+//		error_shutdown("pp_queue enqueue spin lock unlock", ret);
 }
 
 //dequeues and element from the paralle priority queue
 void* ppq_dequeue(pp_queue* ppq)
 {
 	int i, l, r, smallest, last;
-	int ret;
+	//int ret;
 	void *tmp, *min = NULL;
 	compare func;
 
-	if((ret = pthread_spin_lock(&(ppq->s_lock))))	
-		error_shutdown("pp_queue enqueue spin lock lock", ret);
+	//if((ret = pthread_spin_lock(&(ppq->s_lock))))	
+	//	error_shutdown("pp_queue enqueue spin lock lock", ret);
 
 	if(ppq->size)
 	{
@@ -185,19 +185,19 @@ void* ppq_dequeue(pp_queue* ppq)
 		}	
 	}
 
-	if((ret = pthread_spin_unlock(&(ppq->s_lock))))
-		error_shutdown("pp_queue enqueue spin lock unlock", ret);
+	//if((ret = pthread_spin_unlock(&(ppq->s_lock))))
+//		error_shutdown("pp_queue enqueue spin lock unlock", ret);
 
 	return min;
 }
 
 void ppq_free(pp_queue* ppq)
 {
-	int ret;
+	//int ret;
 	//free up memory can only be called by one thread for a specific
 	//parallel priority queue else behaviour is undefined
-	if((ret = pthread_spin_destroy(&(ppq->s_lock))))
-		error_shutdown("pp_queue spin lock destroy", ret);
+	//if((ret = pthread_spin_destroy(&(ppq->s_lock))))
+	//	error_shutdown("pp_queue spin lock destroy", ret);
 	free(ppq->heap);
 	free(ppq);
 }

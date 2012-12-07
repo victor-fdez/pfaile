@@ -48,7 +48,7 @@ void get_moves_for_game_stateI(void** moves, long int* move_orderings, void* sta
 
 void* get_state_for_move_and_game_stateI(void* s_from, void* moves, long int* move_orderings, int *ch, uint32_t num_moves)
 {
-	int i;
+	int i = 0;
 	state* s_to = (state*)malloc(sizeof(state));	
 	move* m = (move*)moves;
 	//copy the old state to the new state

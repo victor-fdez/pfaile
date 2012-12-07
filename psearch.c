@@ -45,11 +45,14 @@ typedef struct thread_info_t
 
 
 //global thread variables
-int num_threads = 4;
+int num_threads = 1;
 tnode* root = NULL;
 //search characterisitcs
 //before max_depth was 7
-int max_depth = 4;
+int max_depth = 5;
+int num_nodes_expanded;
+int num_nodes_discarded;
+int num_nodes_evaluated;
 //variable denoting if the problem has been solved
 bool solved = false;
 //nodes_added is used to broadcast to waiting workers
@@ -164,7 +167,7 @@ void expand_node(tnode* node)
 void discard_node(tnode* node)
 {
 	tnode* ancestor, *p;
-	long int val;
+	long int val = node->type == min ? LONG_MIN : LONG_MAX;
 	//propagate up variables
 	int rem_ch = 1, free = 0, stop = 0;
 	int ch_ref = -1;
@@ -300,6 +303,7 @@ void discard_node(tnode* node)
 
 void propagate_down_to_leaf_values(tnode* node, long int* alpha, long int* beta, int* prunned)
 {
+	//get the alpha beta value at the root
 	if(node == root)
 	{
 		pthread_rwlock_rdlock(&(node->lock));
@@ -567,10 +571,16 @@ void init_workers(void* s)
 	root->ch_ref = -1;
 	ppq_enqueue(open, root);
 	solved = false;
+	num_nodes_expanded = 0;
+	num_nodes_discarded = 0;
+	num_nodes_evaluated = 0;
 	//run num_threads 
 	for(i = 0; i < num_threads; i++)
 	{
 		workers[i].t_id = i;
+		workers[i].num_nodes_expanded = 0;
+		workers[i].num_nodes_discarded = 0;
+		workers[i].num_nodes_evaluated = 0;
 		tc_ret = pthread_create(&(workers[i].t), NULL, &ab_search, &(workers[i])); 
 		if(tc_ret)
 			error_shutdown("pthread_create", tc_ret);
@@ -585,6 +595,9 @@ void rest_workers()
 	for(i = 0; i < num_threads; i++)
 	{
 		tj_ret = pthread_join(workers[i].t, &val_ret);
+		num_nodes_expanded += workers[i].num_nodes_expanded;
+		num_nodes_discarded += workers[i].num_nodes_discarded;
+		num_nodes_evaluated += workers[i].num_nodes_evaluated;
 		if(tj_ret)
 			error_shutdown("pthread_join", tj_ret);
 	}	
@@ -592,17 +605,21 @@ void rest_workers()
 	free(workers);
 }
 
+void print_stats()
+{
+//	printf("number of nodes expanded \t%d\n", num_nodes_expanded);
+//	printf("number of nodes discarded\t%d\n", num_nodes_discarded);
+//	printf("number of nodes evaluated\t%d\n", num_nodes_evaluated); 
+}
+
 void* finally()
 {
 	//get size of move in bytes
 	int size = size_move(); 		
-	printf("root num ch rem %d, best %d\n", root->num_ch_rem, root->best_ch);
-	assert(size > 0);
 	assert((root->best_ch) >= 0);
 	if(root->best_ch < 0)
 		exit(-1);
 	void* best_move = (void*)malloc(size);
-	printf("this is called\n");
 	memcpy(best_move, ((root->moves)+(size*(root->best_ch))), size);
 	//free the root
 	free_moves(root->moves);
@@ -621,6 +638,7 @@ void* think(void* s)
 	//parent threads join and free all workers threads
 	rest_workers();	
 	//best move is returned to main
+	print_stats();
 	return finally();
 }
 

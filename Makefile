@@ -1,8 +1,8 @@
 
 CC = gcc
-OPT =
+OPT = #-O3
 PFLAGS = -Wall -Werror
-FLAGS = -g -Wall
+FLAGS = -g -Wall #-DNDEBUG
 PROF = -pg
 
 # Release Build:
@@ -15,77 +15,28 @@ parallel_headers = pprotos.h pfaile_dep.h
 
 # Parallel Faile Build
 
-parallel_faile: $(parallel_objects)
-	$(CC) -o pfaile $(parallel_objects) -lm -lpthread
+pfaile: $(parallel_objects)
+	$(CC) $(OPT) $(PFLAGS) $(FALGS) -o pfaile $(parallel_objects) -lm -lpthread
 
 pprotos.h: pfaile_dep.h
 
 %.o: %.c $(parallel_headers)
-	$(CC) $(PFLAGS) $(FLAGS) -c -o $@ $<
+	$(CC) $(OPT) $(PFLAGS) $(FLAGS) -c -o $@ $<
 
-# Original Faile Build
+# Profiling Parallel Faile Build:
 
-faile:	$(objects)
-	$(CC) -o faile $(objects) -lm
-
-eval.o:	eval.c $(headers)
-	$(CC) $(OPT) $(FLAGS) -c -o eval.o eval.c
-
-faile.o: faile.c $(headers)
-	$(CC) $(OPT) $(FLAGS) -c -o faile.o faile.c
-
-utils.o: utils.c $(headers)
-	$(CC) $(OPT) $(FLAGS) -c -o utils.o utils.c
-
-moves.o: moves.c $(headers)
-	$(CC) $(OPT) $(FLAGS) -c -o moves.o moves.c
-
-search.o: search.c $(headers)
-	$(CC) $(OPT) $(FLAGS) -c -o search.o search.c
-
-hash.o:	hash.c $(headers) rand.h
-	$(CC) $(OPT) $(FLAGS) -c -o hash.o hash.c
-
-rand.o:	rand.c rand.h
-	$(CC) $(OPT) $(FLAGS) -c -o rand.o rand.c
-
-book.o:	book.c $(headers)
-	$(CC) $(OPT) $(FLAGS) -c -o book.o book.c
-
-# Profiling Build:
-
-pr_objects = faile_pr.o utils_pr.o moves_pr.o search_pr.o eval_pr.o hash_pr.o \
-	rand_pr.o book_pr.o
-
-faile_pr:	$(pr_objects)
-	$(CC) $(PROF) -o $(pr_objects)
-
-eval_pr.o:	eval.c $(headers)
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o eval_pr.o eval.c
-
-faile_pr.o:	faile.c $(headers)
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o faile_pr.o faile.c
-
-utils_pr.o:	utils.c $(headers)
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o utils_pr.o utils.c
-
-moves_pr.o:	moves.c $(headers)
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o moves_pr.o moves.c
-
-search_pr.o:	search.c $(headers)
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o search_pr.o search.c
-
-hash_pr.o:	hash.c $(headers) rand.h
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o hash_pr.o hash.c
-
-rand_pr.o:	rand.c rand.h
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o rand_pr.o rand.c
-
-book_pr.o:	book.c $(headers)
-	$(CC) $(OPT) $(FLAGS) $(PROF) -c -o book_pr.o book.c
+pr_parallel_objects = pfaile_pr.o psearch_pr.o putils_pr.o ppqueue_pr.o chess_plug_pr.o pfaile_dep_pr.o pmoves_pr.o peval_pr.o
 
 
-all:	faile
+pfaile_pr: $(pr_parallel_objects)
+	$(CC) $(PROF) $(OPT) $(FLAGS) -o pr_pfaile $(pr_parallel_objects) -lm -lpthread
+
+%_pr.o: %.c
+	$(CC) $(PROF) $(OPT) $(PFLAGS) $(FLAGS) -c -o $@ $<
+
+
+
+all:	pfaile
 
 clean:
 	rm -f *.o

@@ -240,5 +240,6 @@ int pri_compare(void* tn_va, void* tn_vb)
 		else	//tn_b has more pri bits therefore a is smaller
 			return -1;
 	}
+	return 0;
 }
 
