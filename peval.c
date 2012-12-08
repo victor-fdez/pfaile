@@ -735,7 +735,6 @@ long int mid_eval (state* s) {
   else if (score < 90 && start_piece_count < piece_count) {
     score -= 10;
   }
-
   /* adjust for color: */
   if (white_to_move == 1) {
     return score;

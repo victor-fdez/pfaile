@@ -41,8 +41,10 @@ typedef struct thread_info_t
 	pthread_t 	t;
 	int		t_id;	
 	int 		num_nodes_expanded;
+	int		num_moves_per_nodes_expanded;
 	int		num_nodes_discarded;
 	int		num_nodes_evaluated;
+	int 		num_nodes_seen;
 	//other arguments
 } thread_info;
 
@@ -52,10 +54,14 @@ int num_threads = 1;
 tnode* root = NULL;
 //search characterisitcs
 //before max_depth was 7
-int max_depth = 8;
+//	num_nodes_seen = 0;
+int max_depth = 6;
+int num_moves_per_nodes_expanded;
 int num_nodes_expanded;
 int num_nodes_discarded;
 int num_nodes_evaluated;
+int num_nodes_seen;
+double branching_factor;
 //variable denoting if the problem has been solved
 bool solved = false;
 //nodes_added is used to broadcast to waiting workers
@@ -133,7 +139,7 @@ void free_node(tnode* node)
 //expand_node adds all the children of the given node to the priority queue,
 //afterwards threads waiting for nodes for processing are notified of the
 //new nodes added to the priority queue
-void expand_node(tnode* node)
+void expand_node(tnode* node, thread_info* t_info)
 {
 	int i;
 	int ch;
@@ -151,6 +157,7 @@ void expand_node(tnode* node)
 	node->ch = tn_childs;
 	node->num_ch_rem = node->num_ch;
 	node->moves = moves;	
+	t_info->num_moves_per_nodes_expanded += node->num_ch;
 	//initialize each successor tnode
 	for(i = 0; i < (node->num_ch); i++)
 	{
@@ -389,6 +396,7 @@ void* ab_search(void *args){
 		//if the problem has been solved (still might have a children)
 		if(stop)
 			break;	
+		t_info->num_nodes_seen++;
 		//move up the tree (locking each ancestor)
 		//and check if any ancestor is prunned, if any is, then 
 		//prun all ancestors visited up until this point
@@ -410,7 +418,7 @@ void* ab_search(void *args){
 		else
 		{
 			t_info->num_nodes_expanded++;
-			expand_node(node);	
+			expand_node(node, t_info);	
 		}	
 	}	
 	return NULL;	
@@ -433,8 +441,6 @@ void init_workers(void* s)
 	//create the OPEN parallel priority queue
 	open = ppq_create(OPEN_CAP_SIZE, pri_compare);
 	workers = (thread_info*)malloc(sizeof(thread_info)*num_threads);
-	workers->num_nodes_evaluated = 0;
-	workers->num_nodes_expanded = 0;
 	if(workers == NULL)
 		error_shutdown("workers malloc", -1);		
 	//add the ROOT tnode
@@ -457,15 +463,20 @@ void init_workers(void* s)
 	ppq_enqueue(open, root);
 	solved = false;
 	num_nodes_expanded = 0;
+	num_moves_per_nodes_expanded = 0;
 	num_nodes_discarded = 0;
 	num_nodes_evaluated = 0;
+	num_nodes_seen = 0;
+	branching_factor = 0.0;
 	//run num_threads 
 	for(i = 0; i < num_threads; i++)
 	{
 		workers[i].t_id = i;
 		workers[i].num_nodes_expanded = 0;
+		workers[i].num_moves_per_nodes_expanded = 0;
 		workers[i].num_nodes_discarded = 0;
 		workers[i].num_nodes_evaluated = 0;
+		workers[i].num_nodes_seen = 0;
 		tc_ret = pthread_create(&(workers[i].t), NULL, &ab_search, &(workers[i])); 
 		if(tc_ret)
 			error_shutdown("pthread_create", tc_ret);
@@ -483,18 +494,14 @@ void rest_workers()
 		num_nodes_expanded += workers[i].num_nodes_expanded;
 		num_nodes_discarded += workers[i].num_nodes_discarded;
 		num_nodes_evaluated += workers[i].num_nodes_evaluated;
+		num_nodes_seen += workers[i].num_nodes_seen;
+		branching_factor += ((double)workers[i].num_moves_per_nodes_expanded);
 		if(tj_ret)
 			error_shutdown("pthread_join", tj_ret);
 	}	
+	branching_factor /= ((double)num_nodes_expanded);
 	ppq_free(open);	
 	free(workers);
-}
-
-void print_stats()
-{
-	printf("number of nodes expanded \t%d\n", num_nodes_expanded);
-	printf("number of nodes discarded\t%d\n", num_nodes_discarded);
-	printf("number of nodes evaluated\t%d\n", num_nodes_evaluated); 
 }
 
 void* finally()
@@ -522,8 +529,6 @@ void* think(void* s)
 	//parent thread checks to find if workers threads are done or if time is up
 	//parent threads join and free all workers threads
 	rest_workers();	
-	//best move is returned to main
-	print_stats();
 	return finally();
 }
 

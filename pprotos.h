@@ -47,7 +47,18 @@ extern void ppq_free(pp_queue* ppq);
 //putils.c other utility functions
 extern inline void error_shutdown(char* msg, int error_val);
 
-//psearch.c alpha beta parallel search function
+///ptest.c test search engine with various different factors
+extern void run_tests();
+///psearch.c alpha beta parallel search function
+//variables accesible for testing
+extern int num_threads;
+extern int max_depth;
+extern int num_moves_per_nodes_expanded;
+extern int num_nodes_expanded;
+extern int num_nodes_discarded;
+extern int num_nodes_evaluated;
+extern int num_nodes_seen;
+extern double branching_factor;
 extern void* think(void*);
 extern void*(*get_init_state)(void);
 extern void (*get_moves_for_game_state)(void**, long int*, void*, uint32_t*);
