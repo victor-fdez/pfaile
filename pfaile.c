@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 	//test_faile();
 	state* s = init_game();
 	display_board(stdout, 0, s);	
-	for(i = 0; i < 20; i++)	
+	for(i = 0; i < 100; i++)	
 	{
 		move* m = (move*)think((void*)s);
 		make(m, 0, s);
