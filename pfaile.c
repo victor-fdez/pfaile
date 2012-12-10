@@ -28,7 +28,12 @@ SOFTWARE.
 
 int main(int argc, char** argv)
 {
-	run_tests();
+	state* s;
+	s = init_game();
+	move* m = (move*)think((void*)s);
+	free(m);
+	free(s);
+	//run_tests();
 	//ppq_test();
 	return 0;
 }
