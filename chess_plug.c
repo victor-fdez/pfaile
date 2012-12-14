@@ -35,12 +35,15 @@ void* get_init_stateI(void)
 
 void get_moves_for_game_stateI(void** moves, long int* move_orderings, void* state, uint32_t* num_moves)
 {
+	//uint32_t i, num_moves_rem = 0;
 	move* moves_i = (move*)malloc(sizeof(move)*MAX_TNODES);
 	int num_moves_int = 0;
 	//generate alll possible moves
 	gen(moves_i, &num_moves_int, state);	
 	//order randomly the possible moves
 	order_moves(moves_i, move_orderings, num_moves_int);
+	//for each move check if the move is legal
+	//for(i = 0; i < num_	
 	//set the pointer to point to these moves
 	*num_moves = (uint32_t)num_moves_int;
 	*moves = moves_i;

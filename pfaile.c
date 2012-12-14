@@ -26,14 +26,41 @@ SOFTWARE.
 #include "pprotos.h"
 #include "pfaile_dep.h"
 
+void run()
+{
+	int i;
+	state* s;
+	char move_str[] = "xxxxxxx";
+	num_threads = 2;
+	max_depth = 5;
+
+	get_init_state = get_init_stateI;
+	get_moves_for_game_state = get_moves_for_game_stateI;
+	get_state_for_move_and_game_state = get_state_for_move_and_game_stateI;
+	evaluate_game_state = evaluate_game_stateI;
+	free_state = free_stateI;
+	free_moves = free_movesI;
+	size_move = size_moveI;
+	s = init_game();
+	for(i = 0; i < 100; i++)
+	{
+		move* m = (move*)think((void*)s);
+		make(m, 0, s);
+		comp_to_coord (m, move_str);
+		printf("\n$\tmove %s\n\n", move_str);
+		display_board(stdout, 0, s);
+		free(m);
+	}
+	free(s);
+
+}
+
 int main(int argc, char** argv)
 {
-	state* s;
-	s = init_game();
-	move* m = (move*)think((void*)s);
-	free(m);
-	free(s);
 	//run_tests();
+	run();
 	//ppq_test();
 	return 0;
 }
+
+

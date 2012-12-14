@@ -95,6 +95,118 @@ bool check_legal (move_s moves[], int m) {
 
 }
 
+bool in_check (void) {
+
+  /* return true if the side to move is in check: */
+
+  if (white_to_move == 1) {
+    if (is_attacked (wking_loc, 0)) {
+      return TRUE;
+    }
+  }
+  else {
+    if (is_attacked (bking_loc, 1)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+
+}
+
+
+bool is_attacked (int square, int color) {
+
+  /* this function will return TRUE if square "square" is attacked by a piece
+     of color "color", and return FALSE otherwise */
+
+  int rook_o[4] = {12, -12, 1, -1};
+  int bishop_o[4] = {11, -11, 13, -13};
+  int knight_o[8] = {10, -10, 14, -14, 23, -23, 25, -25};
+  int a_sq, i;
+
+  /* white attacker: */
+  if (color%2) {
+    /* rook-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + rook_o[i];
+      /* the king can attack from one square away: */
+      if (board[a_sq] == wking) return TRUE;
+      /* otherwise, check for sliding pieces: */
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == wrook || board[a_sq] == wqueen) return TRUE;
+	if (board[a_sq] != npiece) break;
+	a_sq += rook_o [i];
+      }
+    }
+
+    /* bishop-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + bishop_o[i];
+      /* check for pawn attacks: */
+      if (board[a_sq] == wpawn && i%2) return TRUE;
+      /* the king can attack from one square away: */
+      if (board[a_sq] == wking) return TRUE;
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == wbishop || board[a_sq] == wqueen) return TRUE;
+	if (board[a_sq] != npiece) break;
+	a_sq += bishop_o [i];
+      }
+    }
+
+    /* knight-style moves: */
+    for (i = 0; i < 8; i++) {
+      a_sq = square + knight_o[i];
+      if (board[a_sq] == wknight) return TRUE;
+    }
+
+    /* if we haven't hit a white attacker by now, there are none: */
+    return FALSE;
+
+  }
+
+  /* black attacker: */
+  else {
+    /* rook-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + rook_o[i];
+      /* the king can attack from one square away: */
+      if (board[a_sq] == bking) return TRUE;
+      /* otherwise, check for sliding pieces: */
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == brook || board[a_sq] == bqueen) return TRUE;
+	if (board[a_sq] != npiece) break;
+	a_sq += rook_o [i];
+      }
+    }
+
+    /* bishop-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + bishop_o[i];
+      /* check for pawn attacks: */
+      if (board[a_sq] == bpawn && !(i%2)) return TRUE;
+      /* the king can attack from one square away: */
+      if (board[a_sq] == bking) return TRUE;
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == bbishop || board[a_sq] == bqueen) return TRUE;
+	if (board[a_sq] != npiece) break;
+	a_sq += bishop_o [i];
+      }
+    }
+
+    /* knight-style moves: */
+    for (i = 0; i < 8; i++) {
+      a_sq = square + knight_o[i];
+      if (board[a_sq] == bknight) return TRUE;
+    }
+
+    /* if we haven't hit a black attacker by now, there are none: */
+    return FALSE;
+
+  }
+
+}
+
 
 void gen (move_s moves[], int *num_moves) {
 

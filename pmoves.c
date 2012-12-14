@@ -33,12 +33,133 @@
  * moves                                          *
  **************************************************/
 #include "pfaile_dep.h"
-/*
-   bool check_legal (move_s moves[], int m) {
+
+bool is_attacked (uint8_t  square, uint8_t color, state* s) {
+
+  /* this function will return TRUE if square "square" is attacked by a piece
+     of color "color", and return FALSE otherwise */
+	uint8_t* board = s->board;
+
+  int rook_o[4] = {12, -12, 1, -1};
+  int bishop_o[4] = {11, -11, 13, -13};
+  int knight_o[8] = {10, -10, 14, -14, 23, -23, 25, -25};
+  int a_sq, i;
+
+  /* white attacker: */
+  if (color%2) {
+    /* rook-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + rook_o[i];
+      /* the king can attack from one square away: */
+      if (board[a_sq] == wking) return true;
+      /* otherwise, check for sliding pieces: */
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == wrook || board[a_sq] == wqueen) return true;
+	if (board[a_sq] != npiece) break;
+	a_sq += rook_o [i];
+      }
+    }
+
+    /* bishop-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + bishop_o[i];
+      /* check for pawn attacks: */
+      if (board[a_sq] == wpawn && i%2) return true;
+      /* the king can attack from one square away: */
+      if (board[a_sq] == wking) return true;
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == wbishop || board[a_sq] == wqueen) return true;
+	if (board[a_sq] != npiece) break;
+	a_sq += bishop_o [i];
+      }
+    }
+
+    /* knight-style moves: */
+    for (i = 0; i < 8; i++) {
+      a_sq = square + knight_o[i];
+      if (board[a_sq] == wknight) return true;
+    }
+
+    /* if we haven't hit a white attacker by now, there are none: */
+    return false;
+
+  }
+
+  /* black attacker: */
+  else {
+    /* rook-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + rook_o[i];
+      /* the king can attack from one square away: */
+      if (board[a_sq] == bking) return true;
+      /* otherwise, check for sliding pieces: */
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == brook || board[a_sq] == bqueen) return true;
+	if (board[a_sq] != npiece) break;
+	a_sq += rook_o [i];
+      }
+    }
+
+    /* bishop-style moves: */
+    for (i = 0; i < 4; i++) {
+      a_sq = square + bishop_o[i];
+      /* check for pawn attacks: */
+      if (board[a_sq] == bpawn && !(i%2)) return true;
+      /* the king can attack from one square away: */
+      if (board[a_sq] == bking) return true;
+      while (board[a_sq] != frame) {
+	if (board[a_sq] == bbishop || board[a_sq] == bqueen) return true;
+	if (board[a_sq] != npiece) break;
+	a_sq += bishop_o [i];
+      }
+    }
+
+    /* knight-style moves: */
+    for (i = 0; i < 8; i++) {
+      a_sq = square + knight_o[i];
+      if (board[a_sq] == bknight) return true;
+    }
+
+    /* if we haven't hit a black attacker by now, there are none: */
+    return false;
+
+  }
+
+}
+
+
+bool in_check (state* s) {
+
+  /* return true if the side to move is in check: */
+	uint8_t white_to_move = (s->white_to_move);	
+	uint8_t wking_loc= (s->wking_loc);
+	uint8_t bking_loc= (s->bking_loc);
+
+  if (white_to_move == 1) {
+    if (is_attacked (wking_loc, 0, s)) {
+      return true;
+    }
+  }
+  else {
+    if (is_attacked (bking_loc, 1, s)) {
+      return true;
+    }
+  }
+
+  return false;
+
+}
+
+
+bool check_legal (move* moves, int m, state* s) {
+
+	uint8_t white_to_move = (s->white_to_move);	
+	uint8_t wking_loc= (s->wking_loc);
+	uint8_t bking_loc= (s->bking_loc);
 
 // determines if a move made was legal.  Checks to see if the player who
 //  just moved castled through check, or is in check.  If the move made
-//   was illegal, returns FALSE, otherwise, returns TRUE.
+//   was illegal, returns false, otherwise, returns TRUE.
 
 int castled = moves[m].castled;
 
@@ -46,52 +167,51 @@ int castled = moves[m].castled;
 if (castled) {
 // white kingside castling: 
 if (castled == wck) {
-if (is_attacked (30, 0)) return FALSE;
-if (is_attacked (31, 0)) return FALSE;
-if (is_attacked (32, 0)) return FALSE;
-return TRUE;
+if (is_attacked (30, 0, s)) return false;
+if (is_attacked (31, 0, s)) return false;
+if (is_attacked (32, 0, s)) return false;
+return true;
 }
 // white queenside castling: 
 if (castled == wcq) {
-if (is_attacked (30, 0)) return FALSE;
-if (is_attacked (29, 0)) return FALSE;
-if (is_attacked (28, 0)) return FALSE;
-return TRUE;
+if (is_attacked (30, 0, s)) return false;
+if (is_attacked (29, 0, s)) return false;
+if (is_attacked (28, 0, s)) return false;
+return true;
 }
 // black kingside castling: 
 if (castled == bck) {
-if (is_attacked (114, 1)) return FALSE;
-if (is_attacked (115, 1)) return FALSE;
-if (is_attacked (116, 1)) return FALSE;
-return TRUE;
+if (is_attacked (114, 1, s)) return false;
+if (is_attacked (115, 1, s)) return false;
+if (is_attacked (116, 1, s)) return false;
+return true;
 }
 // black queenside castling: 
 if (castled == bcq) {
-if (is_attacked (114, 1)) return FALSE;
-if (is_attacked (113, 1)) return FALSE;
-if (is_attacked (112, 1)) return FALSE;
-return TRUE;
+if (is_attacked (114, 1, s)) return false;
+if (is_attacked (113, 1, s)) return false;
+if (is_attacked (112, 1, s)) return false;
+return true;
 }
 }
 
 // otherwise, just check on the kings: 
 // black king: 
 else if (white_to_move%2) {
-if (is_attacked (bking_loc, 1)) return FALSE;
-else return TRUE;
+if (is_attacked (bking_loc, 1, s)) return false;
+else return true;
 }
 
 // white king: 
 else {
-if (is_attacked (wking_loc, 0)) return FALSE;
-else return TRUE;
+if (is_attacked (wking_loc, 0, s)) return false;
+else return true;
 }
 
 // should never get here .. but just so it will compile :P 
-return FALSE;
+return false;
 
 }
-*/
 
 
 void gen(move* moves, int *num_moves, state* s) 
@@ -309,119 +429,6 @@ void gen(move* moves, int *num_moves, state* s)
 	}
 }
 
-/*
-   bool in_check (void) {
-
-// return true if the side to move is in check: 
-
-if (white_to_move == 1) {
-if (is_attacked (wking_loc, 0)) {
-return TRUE;
-}
-}
-else {
-if (is_attacked (bking_loc, 1)) {
-return TRUE;
-}
-}
-
-return FALSE;
-
-}
-*/
-/*
-   bool is_attacked (int square, int color) {
-
-// this function will return TRUE if square "square" is attacked by a piece
-//  of color "color", and return FALSE otherwise
-
-int rook_o[4] = {12, -12, 1, -1};
-int bishop_o[4] = {11, -11, 13, -13};
-int knight_o[8] = {10, -10, 14, -14, 23, -23, 25, -25};
-int a_sq, i;
-
-// white attacker: 
-if (color%2) {
-// rook-style moves: 
-for (i = 0; i < 4; i++) {
-a_sq = square + rook_o[i];
-// the king can attack from one square away: 
-if (board[a_sq] == wking) return TRUE;
-// otherwise, check for sliding pieces: 
-while (board[a_sq] != frame) {
-if (board[a_sq] == wrook || board[a_sq] == wqueen) return TRUE;
-if (board[a_sq] != npiece) break;
-a_sq += rook_o [i];
-}
-}
-
-// bishop-style moves: 
-for (i = 0; i < 4; i++) {
-a_sq = square + bishop_o[i];
-// check for pawn attacks: 
-if (board[a_sq] == wpawn && i%2) return TRUE;
-// the king can attack from one square away: 
-if (board[a_sq] == wking) return TRUE;
-while (board[a_sq] != frame) {
-if (board[a_sq] == wbishop || board[a_sq] == wqueen) return TRUE;
-if (board[a_sq] != npiece) break;
-a_sq += bishop_o [i];
-}
-}
-
-// knight-style moves: 
-for (i = 0; i < 8; i++) {
-a_sq = square + knight_o[i];
-if (board[a_sq] == wknight) return TRUE;
-}
-
-// if we haven't hit a white attacker by now, there are none: 
-return FALSE;
-
-}
-
-// black attacker: 
-else {
-// rook-style moves: 
-for (i = 0; i < 4; i++) {
-a_sq = square + rook_o[i];
-// the king can attack from one square away: 
-if (board[a_sq] == bking) return TRUE;
-// otherwise, check for sliding pieces: 
-while (board[a_sq] != frame) {
-if (board[a_sq] == brook || board[a_sq] == bqueen) return TRUE;
-if (board[a_sq] != npiece) break;
-a_sq += rook_o [i];
-}
-}
-
-// bishop-style moves: 
-for (i = 0; i < 4; i++) {
-a_sq = square + bishop_o[i];
-// check for pawn attacks: 
-if (board[a_sq] == bpawn && !(i%2)) return TRUE;
-// the king can attack from one square away: 
-if (board[a_sq] == bking) return TRUE;
-while (board[a_sq] != frame) {
-	if (board[a_sq] == bbishop || board[a_sq] == bqueen) return TRUE;
-	if (board[a_sq] != npiece) break;
-	a_sq += bishop_o [i];
-}
-}
-
-// knight-style moves: 
-for (i = 0; i < 8; i++) {
-	a_sq = square + knight_o[i];
-	if (board[a_sq] == bknight) return TRUE;
-}
-
-// if we haven't hit a black attacker by now, there are none: 
-return FALSE;
-
-}
-
-}
-	*/
 void make (move* moves, int i, state* s) 
 {
 	uint8_t* board = s->board;
